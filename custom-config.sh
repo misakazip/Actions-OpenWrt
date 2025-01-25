@@ -15,8 +15,8 @@ BUILD_ROOT=${BUILD_ROOT:-"./"}
 
 # Check if .config exists
 if [ ! -f "$BUILD_ROOT/.config" ]; then
-    echo "Error: .config file not found in $BUILD_ROOT. Initialize with 'make menuconfig' first."
-    exit 1
+    echo "Notice: .config file not found in $BUILD_ROOT. Initializing..."
+    make defconfig
 fi
 
 # Target platform settings
