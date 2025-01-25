@@ -13,12 +13,6 @@ set -e
 # Define build root directory (adjust if necessary)
 BUILD_ROOT=${BUILD_ROOT:-"./"}
 
-# Check if .config exists
-if [ ! -f "$BUILD_ROOT/.config" ]; then
-    echo "Notice: .config file not found in $BUILD_ROOT. Initializing..."
-    make defconfig
-fi
-
 # Target platform settings
 echo "# Adding target platform settings..."
 echo 'CONFIG_TARGET_ath79=y' >> $BUILD_ROOT/.config
