@@ -10,129 +10,145 @@
 # Stop script on error
 set -e
 
-# Define build root directory (adjust if necessary)
-BUILD_ROOT=${BUILD_ROOT:-"./"}
+BUILD_ROOT="$(pwd)"
+CONFIG_FILE="$BUILD_ROOT/.config"
+LOG_FILE="$BUILD_ROOT/configuration.log"
 
-# Target platform settings
-echo "# Adding target platform settings..."
-echo 'CONFIG_TARGET_ath79=y' >> $BUILD_ROOT/.config
-echo 'CONFIG_TARGET_ath79_generic=y' >> $BUILD_ROOT/.config
-echo 'CONFIG_TARGET_ath79_generic_DEVICE_elecom_wab-i1750-ps=y' >> $BUILD_ROOT/.config
+# Initialize the configuration file and log file
+initialize_files() {
+    touch "$CONFIG_FILE"
+    echo "# OpenWRT Configuration Log" > "$LOG_FILE"
+}
 
-# Language settings
-echo "# Adding language settings..."
-echo 'CONFIG_LUCI_LANG_ja=y' >> $BUILD_ROOT/.config
+# Function to append configuration with error handling and logging
+append_config() {
+    local config="$1"
+    if ! echo "$config" >> "$CONFIG_FILE"; then
+        echo "Error: Failed to append '$config'" >&2
+        echo "[ERROR] $config" >> "$LOG_FILE"
+        exit 1
+    fi
+    echo "[SUCCESS] $config" >> "$LOG_FILE"
+}
 
-# NGINX settings
-echo "# Adding NGINX settings..."
-for setting in \
-    CONFIG_NGINX_HTTP_ACCESS \
-    CONFIG_NGINX_HTTP_AUTH_BASIC \
-    CONFIG_NGINX_HTTP_AUTOINDEX \
-    CONFIG_NGINX_HTTP_BROWSER \
-    CONFIG_NGINX_HTTP_CACHE \
-    CONFIG_NGINX_HTTP_CHARSET \
-    CONFIG_NGINX_HTTP_EMPTY_GIF \
-    CONFIG_NGINX_HTTP_FASTCGI \
-    CONFIG_NGINX_HTTP_GEO \
-    CONFIG_NGINX_HTTP_GZIP \
-    CONFIG_NGINX_HTTP_GZIP_STATIC \
-    CONFIG_NGINX_HTTP_LIMIT_CONN \
-    CONFIG_NGINX_HTTP_LIMIT_REQ \
-    CONFIG_NGINX_HTTP_MAP \
-    CONFIG_NGINX_HTTP_MEMCACHED \
-    CONFIG_NGINX_HTTP_PROXY \
-    CONFIG_NGINX_HTTP_REFERER \
-    CONFIG_NGINX_HTTP_REWRITE \
-    CONFIG_NGINX_HTTP_SCGI \
-    CONFIG_NGINX_HTTP_SPLIT_CLIENTS \
-    CONFIG_NGINX_HTTP_SSI \
-    CONFIG_NGINX_HTTP_UPSTREAM_HASH \
-    CONFIG_NGINX_HTTP_UPSTREAM_IP_HASH \
-    CONFIG_NGINX_HTTP_UPSTREAM_KEEPALIVE \
-    CONFIG_NGINX_HTTP_UPSTREAM_LEAST_CONN \
-    CONFIG_NGINX_HTTP_USERID \
-    CONFIG_NGINX_HTTP_UWSGI \
-    CONFIG_NGINX_HTTP_V2 \
-    CONFIG_NGINX_PCRE; do
-    echo "$setting=y" >> $BUILD_ROOT/.config
-done
+# Function to append multiple configurations, supports parallelism
+append_multiple_configs() {
+    local configs=("$@")
+    for config in "${configs[@]}"; do
+        append_config "$config" &
+    done
+    wait  # Ensure all background processes finish
+}
 
-# OpenSSL settings
-echo "# Adding OpenSSL settings..."
-for setting in \
-    CONFIG_OPENSSL_ENGINE \
-    CONFIG_OPENSSL_PREFER_CHACHA_OVER_GCM \
-    CONFIG_OPENSSL_WITH_ASM \
-    CONFIG_OPENSSL_WITH_CHACHA_POLY1305 \
-    CONFIG_OPENSSL_WITH_CMS \
-    CONFIG_OPENSSL_WITH_DEPRECATED \
-    CONFIG_OPENSSL_WITH_ERROR_MESSAGES \
-    CONFIG_OPENSSL_WITH_IDEA \
-    CONFIG_OPENSSL_WITH_MDC2 \
-    CONFIG_OPENSSL_WITH_PSK \
-    CONFIG_OPENSSL_WITH_SEED \
-    CONFIG_OPENSSL_WITH_SRP \
-    CONFIG_OPENSSL_WITH_TLS13 \
-    CONFIG_OPENSSL_WITH_WHIRLPOOL; do
-    echo "$setting=y" >> $BUILD_ROOT/.config
-done
+# Configuration lists
+TARGET_CONFIGS=(
+    "CONFIG_TARGET_ath79=y"
+    "CONFIG_TARGET_ath79_generic=y"
+    "CONFIG_TARGET_ath79_generic_DEVICE_elecom_wab-i1750-ps=y"
+)
 
-# OpenVPN settings
-echo "# Adding OpenVPN settings..."
-for setting in \
-    CONFIG_OPENVPN_openssl_ENABLE_FRAGMENT \
-    CONFIG_OPENVPN_openssl_ENABLE_LZ4 \
-    CONFIG_OPENVPN_openssl_ENABLE_LZO \
-    CONFIG_OPENVPN_openssl_ENABLE_PORT_SHARE \
-    CONFIG_OPENVPN_openssl_ENABLE_SMALL; do
-    echo "$setting=y" >> $BUILD_ROOT/.config
-done
+NGINX_FEATURES=(
+    "CONFIG_NGINX_HTTP_ACCESS=y"
+    "CONFIG_NGINX_HTTP_AUTH_BASIC=y"
+    "CONFIG_NGINX_HTTP_AUTOINDEX=y"
+    "CONFIG_NGINX_HTTP_BROWSER=y"
+    "CONFIG_NGINX_HTTP_CACHE=y"
+    "CONFIG_NGINX_HTTP_CHARSET=y"
+    "CONFIG_NGINX_HTTP_EMPTY_GIF=y"
+    "CONFIG_NGINX_HTTP_FASTCGI=y"
+    "CONFIG_NGINX_HTTP_GEO=y"
+    "CONFIG_NGINX_HTTP_GZIP=y"
+    "CONFIG_NGINX_HTTP_GZIP_STATIC=y"
+    "CONFIG_NGINX_HTTP_LIMIT_CONN=y"
+    "CONFIG_NGINX_HTTP_LIMIT_REQ=y"
+    "CONFIG_NGINX_HTTP_MAP=y"
+    "CONFIG_NGINX_HTTP_MEMCACHED=y"
+    "CONFIG_NGINX_HTTP_PROXY=y"
+    "CONFIG_NGINX_HTTP_REFERER=y"
+    "CONFIG_NGINX_HTTP_REWRITE=y"
+    "CONFIG_NGINX_HTTP_SCGI=y"
+    "CONFIG_NGINX_HTTP_SPLIT_CLIENTS=y"
+    "CONFIG_NGINX_HTTP_SSI=y"
+    "CONFIG_NGINX_HTTP_UPSTREAM_HASH=y"
+    "CONFIG_NGINX_HTTP_UPSTREAM_IP_HASH=y"
+    "CONFIG_NGINX_HTTP_UPSTREAM_KEEPALIVE=y"
+    "CONFIG_NGINX_HTTP_UPSTREAM_LEAST_CONN=y"
+    "CONFIG_NGINX_HTTP_USERID=y"
+    "CONFIG_NGINX_HTTP_UWSGI=y"
+    "CONFIG_NGINX_HTTP_V2=y"
+    "CONFIG_NGINX_PCRE=y"
+)
 
-# Package settings
-echo "# Adding package settings..."
-for setting in \
-    CONFIG_PACKAGE_cgi-io \
-    CONFIG_PACKAGE_libatomic \
-    CONFIG_PACKAGE_libcap \
-    CONFIG_PACKAGE_liblucihttp \
-    CONFIG_PACKAGE_liblucihttp-ucode \
-    CONFIG_PACKAGE_libopenssl \
-    CONFIG_PACKAGE_libpcre2 \
-    CONFIG_PACKAGE_libpthread \
-    CONFIG_PACKAGE_librt \
-    CONFIG_PACKAGE_libstdcpp \
-    CONFIG_PACKAGE_libuuid; do
-    echo "$setting=y" >> $BUILD_ROOT/.config
-done
+OPENSSL_FEATURES=(
+    "CONFIG_OPENSSL_ENGINE=y"
+    "CONFIG_OPENSSL_PREFER_CHACHA_OVER_GCM=y"
+    "CONFIG_OPENSSL_WITH_ASM=y"
+    "CONFIG_OPENSSL_WITH_CHACHA_POLY1305=y"
+    "CONFIG_OPENSSL_WITH_CMS=y"
+    "CONFIG_OPENSSL_WITH_DEPRECATED=y"
+    "CONFIG_OPENSSL_WITH_ERROR_MESSAGES=y"
+    "CONFIG_OPENSSL_WITH_IDEA=y"
+    "CONFIG_OPENSSL_WITH_MDC2=y"
+    "CONFIG_OPENSSL_WITH_PSK=y"
+    "CONFIG_OPENSSL_WITH_SEED=y"
+    "CONFIG_OPENSSL_WITH_SRP=y"
+    "CONFIG_OPENSSL_WITH_TLS13=y"
+    "CONFIG_OPENSSL_WITH_WHIRLPOOL=y"
+)
 
-# LuCI settings
-echo "# Adding LuCI settings..."
-for setting in \
-    CONFIG_PACKAGE_luci-app-firewall \
-    CONFIG_PACKAGE_luci-app-package-manager \
-    CONFIG_PACKAGE_luci-base \
-    CONFIG_PACKAGE_luci-i18n-base-ja \
-    CONFIG_PACKAGE_luci-i18n-firewall-ja \
-    CONFIG_PACKAGE_luci-i18n-package-manager-ja \
-    CONFIG_PACKAGE_luci-mod-admin-full \
-    CONFIG_PACKAGE_luci-mod-network \
-    CONFIG_PACKAGE_luci-mod-status \
-    CONFIG_PACKAGE_luci-mod-system \
-    CONFIG_PACKAGE_luci-theme-bootstrap; do
-    echo "$setting=y" >> $BUILD_ROOT/.config
-done
+PACKAGES=(
+    "CONFIG_PACKAGE_bash=y"
+    "CONFIG_PACKAGE_cgi-io=y"
+    "CONFIG_PACKAGE_ip-tiny=y"
+    "CONFIG_PACKAGE_kmod-crypto-acompress=m"
+    "CONFIG_PACKAGE_kmod-crypto-authenc=m"
+    "CONFIG_PACKAGE_kmod-crypto-cbc=m"
+    "CONFIG_PACKAGE_kmod-crypto-deflate=m"
+    "CONFIG_PACKAGE_kmod-crypto-des=m"
+    "CONFIG_PACKAGE_kmod-crypto-echainiv=m"
+    "CONFIG_PACKAGE_kmod-crypto-kpp=y"
+    "CONFIG_PACKAGE_kmod-crypto-lib-chacha20=y"
+    "CONFIG_PACKAGE_kmod-crypto-lib-chacha20poly1305=y"
+    "CONFIG_PACKAGE_kmod-crypto-lib-curve25519=y"
+    "CONFIG_PACKAGE_kmod-crypto-lib-poly1305=y"
+    "CONFIG_PACKAGE_kmod-crypto-md5=m"
+    "CONFIG_PACKAGE_kmod-crypto-sha1=m"
+    "CONFIG_PACKAGE_kmod-ipsec=m"
+    "CONFIG_PACKAGE_kmod-ipsec4=m"
+    "CONFIG_PACKAGE_kmod-ipsec6=m"
+    "CONFIG_PACKAGE_kmod-iptunnel4=m"
+    "CONFIG_PACKAGE_kmod-iptunnel6=m"
+    "CONFIG_PACKAGE_kmod-lib-zlib-deflate=m"
+    "CONFIG_PACKAGE_kmod-lib-zlib-inflate=m"
+    "CONFIG_PACKAGE_kmod-tun=m"
+    "CONFIG_PACKAGE_kmod-udptunnel4=y"
+    "CONFIG_PACKAGE_kmod-udptunnel6=y"
+    "CONFIG_PACKAGE_kmod-wireguard=y"
+    "CONFIG_PACKAGE_libatomic=y"
+    "CONFIG_PACKAGE_libcap=y"
+    "CONFIG_PACKAGE_libcap-ng=m"
+    "CONFIG_PACKAGE_liblucihttp=y"
+    "CONFIG_PACKAGE_liblucihttp-ucode=y"
+    "CONFIG_PACKAGE_liblz4=m"
+    "CONFIG_PACKAGE_liblzo=m"
+    "CONFIG_PACKAGE_libncurses=y"
+    "CONFIG_PACKAGE_libopenssl=y"
+    "CONFIG_PACKAGE_libpcre2=y"
+    "CONFIG_PACKAGE_libpthread=y"
+    "CONFIG_PACKAGE_libreadline=y"
+    "CONFIG_PACKAGE_librt=y"
+    "CONFIG_PACKAGE_libstdcpp=y"
+    "CONFIG_PACKAGE_libuuid=y"
+    "CONFIG_PACKAGE_libzip-openssl=m"
+    "CONFIG_PACKAGE_libzstd=m"
+)
 
-# Additional packages
-echo "# Adding additional packages..."
-for setting in \
-    CONFIG_PACKAGE_luci-app-wol \
-    CONFIG_PACKAGE_luci-app-aria2 \
-    CONFIG_PACKAGE_ariang \
-    CONFIG_PACKAGE_luci-app-samba4 \
-    CONFIG_PACKAGE_luci-app-upnp; do
-    echo "$setting=y" >> $BUILD_ROOT/.config
-done
+# Main Execution
+initialize_files
+append_multiple_configs "${TARGET_CONFIGS[@]}"
+append_multiple_configs "${NGINX_FEATURES[@]}"
+append_multiple_configs "${OPENSSL_FEATURES[@]}"
+append_multiple_configs "${PACKAGES[@]}"
 
-# Final message
-echo "Configuration complete. You can now proceed with the build."
+# Final Message
+echo "Configuration appended successfully. Log file saved to $LOG_FILE."
