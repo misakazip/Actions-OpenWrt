@@ -10,7 +10,6 @@
 # Stop script on error
 set -e
 
-BUILD_ROOT="$(pwd)"
 CONFIG_FILE="$BUILD_ROOT/.config"
 
 curl -fsSL -o $CONFIG_FILE https://raw.githubusercontent.com/misakazip/Actions-OpenWrt/refs/heads/master/.config
